@@ -1,0 +1,60 @@
+{
+  "_comment": "Capacidades que un integrador puede querer y para las que NO hay ruta soportada. La ausencia de una operación en el contrato no es una instrucción: se puede leer como \"usá otra cosa\", que es lo que no hay que hacer. Esto dice, por capacidad, que no hay camino y a quién preguntarle. Generado desde surface/skill-notes.md.",
+  "version": "1.0.0",
+  "limitaciones": [
+    {
+      "id": "referencia-en-sendcfes",
+      "capacidad": "Referenciar el comprobante original desde una nota emitida por sendCfes con el código de tipo (112, 113, …)",
+      "estado": "hay ruta soportada, pero es otra",
+      "por_que": "El bloque de referencia dentro del cuerpo del comprobante no está descrito en el esquema Cfe ni en las guías. Lo que sí está documentado es POST /v1/companies/{companyRut}/createCreditNote, que está en el contrato y recibe referencedDocuments con cfeId o la terna cfeType+serie+nro.",
+      "no_hagas": "No inventes un bloque de referencia dentro del cuerpo de sendCfes: el esquema deja additionalProperties abierto, así que se firma igual y queda una nota que no anula nada. Usá el endpoint que documenta la referencia.",
+      "preguntar_a": "pymo",
+      "pregunta": "¿Se puede emitir una nota de crédito por sendCfes con el tipo 112 y referenciar el original en el cuerpo, o createCreditNote es el único camino soportado?"
+    },
+    {
+      "id": "csv-bulk",
+      "capacidad": "Emitir en lote desde un CSV con bulkSendCfes",
+      "estado": "endpoint soportado, formato del archivo sin documentar",
+      "por_que": "El endpoint está en el contrato; la forma del CSV no está descrita en ninguna fuente de esta skill.",
+      "no_hagas": "No infieras las columnas ni su orden a partir del cuerpo JSON de sendCfes.",
+      "preguntar_a": "pymo",
+      "pregunta": "¿Cuál es el formato exacto del CSV de bulkSendCfes: columnas, orden, separador, codificación y cómo se expresan las líneas de detalle?"
+    },
+    {
+      "id": "reconciliacion-contingencia",
+      "capacidad": "Reconciliar comprobantes de contingencia una vez que DGI vuelve a responder",
+      "estado": "sin procedimiento documentado",
+      "por_que": "El mecanismo por el que los comprobantes 2xx se informan a DGI al normalizarse el servicio (reporte diario contra reenvío) no está reproducido ni descrito.",
+      "no_hagas": "No armes un proceso de reenvío por tu cuenta: cuándo corresponde contingencia y cómo se regulariza son criterios del régimen, no de la API.",
+      "preguntar_a": "pymo y el contador de la empresa",
+      "pregunta": "¿Cómo se informan a DGI los comprobantes emitidos en contingencia una vez restablecido el servicio, y qué tiene que hacer el integrador?"
+    },
+    {
+      "id": "formato-de-fecha",
+      "capacidad": "Usar un único formato de fecha en toda la API",
+      "estado": "inconsistente por diseño actual",
+      "por_que": "Conviven ISO con offset (-03:00), ISO en UTC (Z) y YYYY-MM-DD en parámetros de ruta.",
+      "no_hagas": "No unifiques por tu cuenta: mirá el ejemplo del endpoint que vas a llamar.",
+      "preguntar_a": "pymo",
+      "pregunta": "¿Qué formato de fecha espera cada endpoint, y hay alguno donde el offset cambie la interpretación?"
+    },
+    {
+      "id": "numero-de-sucursal",
+      "capacidad": "Averiguar el número de sucursal de una empresa",
+      "estado": "dato de onboarding, no de la API",
+      "por_que": "Es el número de sucursal ante DGI y lo asigna pymo durante el alta.",
+      "no_hagas": "No lo adivines ni asumas que es 1.",
+      "preguntar_a": "pymo",
+      "pregunta": "¿Qué número de sucursal corresponde a cada punto de emisión de esta empresa?"
+    },
+    {
+      "id": "idempotencia-fuera-de-emision",
+      "capacidad": "Reintentar con seguridad algo que no sea una emisión",
+      "estado": "sin garantía escrita",
+      "por_que": "clientEmissionId cubre sendCfes. Aceptar o rechazar un CFE recibido, o cualquier otra escritura, no tiene una garantía equivalente documentada.",
+      "no_hagas": "No repitas una escritura que no sea de emisión dando por hecho que es idempotente.",
+      "preguntar_a": "pymo",
+      "pregunta": "¿Qué pasa si se repite un PUT de cfeStatus, y hay alguna clave de idempotencia para las escrituras que no son emisión?"
+    }
+  ]
+}

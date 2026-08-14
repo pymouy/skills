@@ -1,0 +1,184 @@
+{
+  "_comment": "Casos de la autoprueba de scripts/validar.mjs: cada uno declara qué reglas de nivel ERROR tiene que encontrar el verificador, y opcionalmente qué avisos. El código de salida se chequea siempre: 0 si `espera` está vacío, 1 si no, y `salida` explícito para los casos donde el verificador se niega a adivinar (2). Ese default existe porque sin él un fixture borrado hacía pasar el caso: el modo pedido salía con 2 y sin hallazgos, y un caso que esperaba [] lo leía como éxito. Un caso que se puede aprobar por la ausencia de su propio archivo no prueba nada. Correr: node scripts/validar.mjs autoprueba",
+  "casos": [
+    {
+      "id": "emision-valida",
+      "modo": "pedido",
+      "archivo": "emision-valida.json",
+      "url": "https://gatewaytest.pymo.uy/v1/companies/219999990008/sendCfes/1",
+      "rut": "219999990008",
+      "espera": [],
+      "porque": "El cuerpo del ejemplo del contrato, contra homologación y con el RUT de la sesión. Si esto falla, el verificador rechaza integraciones correctas."
+    },
+    {
+      "id": "tipo-de-cfe-inexistente",
+      "modo": "pedido",
+      "archivo": "emision-tipo-inexistente.json",
+      "url": "https://gatewaytest.pymo.uy/v1/companies/219999990008/sendCfes/1",
+      "espera": [
+        "CONTRATO"
+      ],
+      "porque": "1111 no es un código de tipo. El gateway ignora la clave en silencio, responde SUCCESS y no emite nada: sin este chequeo el error aparece cuando falta la factura."
+    },
+    {
+      "id": "sin-clientEmissionId",
+      "modo": "pedido",
+      "archivo": "emision-sin-id.json",
+      "url": "https://gatewaytest.pymo.uy/v1/companies/219999990008/sendCfes/1",
+      "espera": [
+        "CONTRATO",
+        "IDEMPOTENCIA"
+      ],
+      "porque": "Sin id no hay clave de idempotencia, y sin clave de idempotencia el primer timeout duplica el comprobante."
+    },
+    {
+      "id": "id-repetido-en-el-mismo-lote",
+      "modo": "pedido",
+      "archivo": "emision-id-repetido.json",
+      "url": "https://gatewaytest.pymo.uy/v1/companies/219999990008/sendCfes/1",
+      "espera": [
+        "IDEMPOTENCIA"
+      ],
+      "porque": "El índice único es empresa+sucursal+tipo+id: el segundo del lote vuelve DUPLICATED_KEY en lugar de emitir, y el integrador cree que emitió dos."
+    },
+    {
+      "id": "apunta-a-produccion",
+      "modo": "pedido",
+      "archivo": "emision-valida.json",
+      "url": "https://gateway.pymo.uy/v1/companies/219999990008/sendCfes/1",
+      "rut": "219999990008",
+      "espera": [
+        "AMBIENTE"
+      ],
+      "porque": "Mismo cuerpo, misma respuesta, otro documento: lo único que separa la prueba del comprobante fiscal es el host."
+    },
+    {
+      "id": "rut-que-no-es-el-de-la-sesion",
+      "modo": "pedido",
+      "archivo": "emision-valida.json",
+      "url": "https://gatewaytest.pymo.uy/v1/companies/211234567005/sendCfes/1",
+      "rut": "219999990008",
+      "espera": [
+        "RUT"
+      ],
+      "porque": "La sesión está atada al RUT de la empresa; cualquier otro responde 403 FORBIDDEN."
+    },
+    {
+      "id": "endpoint-fuera-de-la-superficie",
+      "modo": "pedido",
+      "archivo": "emision-valida.json",
+      "url": "https://gatewaytest.pymo.uy/v1/cotizaciones",
+      "espera": [
+        "ENDPOINT"
+      ],
+      "porque": "Una ruta que no está en el contrato. Es inventada a propósito: la regla salta con cualquier ruta ausente, así que no hace falta que el caso nombre un endpoint real que el gateway tenga y esta skill no publique. Apuntó antes a endpoints reales dos veces, y las dos veces se venció cuando la superficie cambió y el caso pasó a no probar nada."
+    },
+    {
+      "id": "aceptar-un-recibido",
+      "modo": "pedido",
+      "archivo": "recepcion-aceptar.json",
+      "url": "https://gatewaytest.pymo.uy/v1/companies/219999990008/inSobres/cfes/6a7121a37698d7c0ab3f1b51/cfeStatus",
+      "espera": [],
+      "porque": "El único cuerpo que acepta de verdad."
+    },
+    {
+      "id": "aceptar-en-minuscula",
+      "modo": "pedido",
+      "archivo": "recepcion-typo.json",
+      "url": "https://gatewaytest.pymo.uy/v1/companies/219999990008/inSobres/cfes/6a7121a37698d7c0ab3f1b51/cfeStatus",
+      "espera": [
+        "CONTRATO",
+        "RECEPCION"
+      ],
+      "porque": "El gateway compara contra ACCEPTED exacto y trata todo lo demás como rechazo, con 200 y sin error: el proveedor ve un rechazo que nadie decidió."
+    },
+    {
+      "id": "callback-que-el-gateway-descarta",
+      "modo": "pedido",
+      "archivo": "sucursal-callback.json",
+      "url": "https://gatewaytest.pymo.uy/v1/companies/219999990008/bo/1",
+      "espera": [
+        "CONTRATO"
+      ],
+      "porque": "PATCH de sucursal aplica cinco campos y descarta el resto en silencio: mandar callbackNotificationUrl responde éxito y no cambia nada."
+    },
+    {
+      "id": "codigo-con-los-siete-patrones",
+      "modo": "codigo",
+      "archivo": "codigo/integracion-mala.js",
+      "espera": [
+        "ENDPOINT-NO-SOPORTADO",
+        "HTTP-200",
+        "IDEMPOTENCIA",
+        "LOTE",
+        "PRODUCCION-IMPLICITA",
+        "RECEPCION"
+      ],
+      "porque": "Una integración plausible, que compila, pasa sus tests y comete los siete errores que esta skill existe para evitar. ASINCRONIA quedó como aviso y no como error: la regla no es opinable, pero deducirla de cómo alguien nombró una variable sí lo es. Se declara acá igual, para que bajarla de nivel no sea lo mismo que borrarla.",
+      "espera_avisos": [
+        "ASINCRONIA"
+      ]
+    },
+    {
+      "id": "codigo-correcto",
+      "modo": "codigo",
+      "archivo": "codigo/integracion-buena.js",
+      "espera": [],
+      "porque": "El mismo trabajo escrito bien. Si esto empieza a fallar, el verificador se volvió ruido y nadie lo va a correr."
+    },
+    {
+      "id": "test-que-emite-en-produccion",
+      "modo": "codigo",
+      "archivo": "codigo/emision-spec.js",
+      "espera": [
+        "PRODUCCION-EN-TESTS"
+      ],
+      "porque": "Un test verde que emite documentos fiscales reales en cada corrida del pipeline. El archivo se llama con guion y no con punto: el verificador lo sigue leyendo como test y el glob por defecto de jest y vitest no lo colecta, que es lo que hace falta cuando el bundle se copia adentro del repo del integrador."
+    },
+    {
+      "id": "produccion-como-default-de-configuracion",
+      "modo": "codigo",
+      "archivo": "codigo/produccion-por-default.js",
+      "espera": [
+        "PRODUCCION-IMPLICITA"
+      ],
+      "porque": "process.env.PYMO_BASE_URL || 'https://gateway.pymo.uy'. Salía en verde: la regla de default eximía cualquier línea que nombrara process.env, y ésta lo nombra. Leer configuración no es una mitigación cuando producción es lo que queda si la configuración falta, y este es el caso que el verificador existe para atrapar."
+    },
+    {
+      "id": "mapa-de-ambientes-explicito",
+      "modo": "codigo",
+      "archivo": "codigo/mapa-ambientes.js",
+      "espera": [],
+      "porque": "Nombrar producción junto a homologación, con el default en homologación, es haber modelado la decisión. Si esto empieza a fallar, el verificador pasa a marcar el patrón correcto y deja de correrse."
+    },
+    {
+      "id": "metodo-ambiguo-sin-declarar",
+      "modo": "pedido",
+      "archivo": "emision-valida.json",
+      "url": "https://gatewaytest.pymo.uy/v1/companies/219999990008/logo",
+      "salida": 2,
+      "espera": [],
+      "porque": "Esa ruta admite GET y POST. Elegir el más probable validaría el cuerpo contra el esquema de la otra operación y pasaría en verde, así que el verificador se niega a adivinar y lo dice."
+    },
+    {
+      "id": "endpoint-con-ruta-concreta",
+      "modo": "pedido",
+      "archivo": "recepcion-typo.json",
+      "endpoint": "PUT /v1/companies/219999990008/inSobres/cfes/6a7121a37698d7c0ab3f1b51/cfeStatus",
+      "espera": [
+        "CONTRATO",
+        "RECEPCION"
+      ],
+      "porque": "--endpoint con ids reales, que es lo que alguien tiene a mano. Tiene que resolver a la plantilla del contrato y seguir hasta los chequeos del cuerpo: antes respondía que la operación no estaba soportada y volvía antes de mirar el cfeStatus, que es justamente el defecto de este fixture. Ningún otro caso usa --endpoint, y por eso el agujero era invisible."
+    },
+    {
+      "id": "llamada-con-url-absoluta",
+      "modo": "codigo",
+      "archivo": "codigo/url-absoluta.js",
+      "espera": [
+        "ENDPOINT-NO-SOPORTADO"
+      ],
+      "porque": "La misma llamada que ya está cubierta con base interpolada, ahora con el host adentro del literal. Se leía como mención y el aviso decía 'sin llamarlo acá' en la línea que lo llama: el nivel dependía de cómo se escribió la URL, no de lo que hace el código."
+    }
+  ]
+}

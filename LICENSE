@@ -1,0 +1,34 @@
+BORRADOR - PENDIENTE DE APROBACION POR PYMO.
+
+Este texto lo redactó el equipo de documentación como propuesta. No es una decisión
+tomada: mientras esta línea siga acá, el repositorio no debería hacerse público.
+
+---
+
+Copyright (c) 2026 pymo. Todos los derechos reservados.
+
+Se concede permiso, sin cargo, a cualquier persona que obtenga una copia de este
+material (los "Materiales") para usarlo, copiarlo y modificarlo con el único fin de
+construir, operar y mantener una integración con las APIs de pymo, incluyendo su uso
+como contexto para herramientas de asistencia de programación.
+
+Sobre este permiso rigen las siguientes condiciones:
+
+1. El aviso de copyright y este permiso deben incluirse en todas las copias o
+   porciones sustanciales de los Materiales.
+
+2. Los Materiales no pueden redistribuirse, publicarse ni ofrecerse a terceros como
+   producto o servicio propio, ni como parte de uno, fuera del fin autorizado arriba.
+
+3. Los Materiales describen una API; no constituyen asesoramiento fiscal ni contable,
+   ni una interpretación oficial del régimen de facturación electrónica de la DGI.
+
+LOS MATERIALES SE ENTREGAN "TAL CUAL", SIN GARANTIA DE NINGUN TIPO, EXPRESA O
+IMPLICITA, INCLUYENDO PERO NO LIMITADO A LAS GARANTIAS DE COMERCIABILIDAD, APTITUD
+PARA UN PROPOSITO PARTICULAR Y NO INFRACCION. EN NINGUN CASO LOS AUTORES O TITULARES
+DEL COPYRIGHT SERAN RESPONSABLES POR NINGUN RECLAMO, DAÑO U OTRA RESPONSABILIDAD, YA
+SEA EN UNA ACCION CONTRACTUAL, EXTRACONTRACTUAL O DE OTRO TIPO, DERIVADA DE, O EN
+CONEXION CON, LOS MATERIALES O SU USO.
+
+En particular: un comprobante fiscal electrónico emitido contra la DGI no es
+reversible. La responsabilidad por lo que una integración emita es de quien la opera.

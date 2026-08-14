@@ -1,0 +1,35 @@
+{
+  "111": [
+    {
+      "IdDoc": {
+        "MntBruto": "1",
+        "FmaPago": "1"
+      },
+      "Receptor": {
+        "TipoDocRecep": "2",
+        "CodPaisRecep": "UY",
+        "DocRecep": "211234567005",
+        "RznSocRecep": "EMPRESA DE EJEMPLO SA",
+        "DirRecep": "Calle Falsa 1234",
+        "CiudadRecep": "Montevideo",
+        "DeptoRecep": "Montevideo"
+      },
+      "Totales": {
+        "TpoMoneda": "UYU"
+      },
+      "Items": [
+        {
+          "NroLinDet": "1",
+          "IndFact": "1",
+          "NomItem": "Servicio de ejemplo",
+          "Cantidad": 1,
+          "UniMed": "N/A",
+          "PrecioUnitario": 1000,
+          "MontoItem": 1000
+        }
+      ],
+      "adenda": "Texto libre opcional"
+    }
+  ],
+  "emailsToNotify": []
+}

@@ -1,0 +1,4 @@
+{
+  "name": "Casa central",
+  "callbackNotificationUrl": "https://mi-erp.example/webhooks/pymo"
+}
