@@ -1,11 +1,11 @@
 ---
-name: pymo-gateway
+name: gateway
 description: "Integrar la API del gateway de pymo, facturación electrónica CFE de Uruguay ante DGI: login por sesión (cookie connect.sid), emisión con sendCfes y clientEmissionId, consulta de estado, recepción de comprobantes de proveedores y datos de referencia. Integrate the pymo Gateway API for Uruguayan electronic invoicing (CFE / DGI e-invoicing). Usar al escribir, revisar, depurar o testear código que nombre pymo, que llame a gatewaytest.pymo.uy o gateway.pymo.uy, o que use identificadores propios de esta API: sendCfes, clientEmissionId, cfesActiveNumbers, inSobres, connect.sid. Use when the work names pymo or calls those hosts. Los términos fiscales generales -CFE, DGI, RUT, CAE, eFactura, eTicket- activan esta skill sólo junto a pymo o a su API: por sí solos pueden ser cualquier proveedor uruguayo, y esta skill no describe el régimen fiscal, describe una API. No usar para preguntas conceptuales sobre facturación electrónica, ni para otro proveedor, ni para el CFDI mexicano, el DTE chileno o la NFe brasileña."
 license: Propietario de pymo. Distribuido a integradores para construir contra la API; no redistribuir.
 compatibility: "HTTP/JSON sobre TLS, sesión por cookie (no bearer, no API key, no OAuth). No hay SDK oficial: sirve cualquier cliente HTTP que persista cookies. Los chequeos de scripts/ necesitan Node 18+ y no tienen dependencias."
 metadata:
   contrato-version: "1.0.0"
-  contrato-sha256: "ede445e74cca11df"
+  contrato-sha256: "72e85c1a36464591"
   operaciones-soportadas: "49"
   generado-por: "gateway-docs/scripts/openapi-to-skill.mjs"
 ---
@@ -303,6 +303,6 @@ puntos donde una deducción plausible produce un comprobante válido y equivocad
 | `scripts/validar.mjs` | Antes de mandar un request, y antes de dar la integración por terminada |
 | `fixtures/` | Ejemplos válidos e inválidos, y los casos que usa la autoprueba del verificador |
 
-Contrato: versión 1.0.0, 49 operaciones, sha256 `ede445e74cca11df`.
+Contrato: versión 1.0.0, 49 operaciones, sha256 `72e85c1a36464591`.
 Si el gateway con el que hablás no se comporta como dice este contrato, no lo compenses en el
 código: pará y confirmá qué versión estás integrando.

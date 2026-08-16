@@ -3,7 +3,7 @@
   "info": {
     "title": "pymo Gateway API - superficie soportada",
     "version": "1.0.0",
-    "description": "API del gateway de facturación electrónica (CFE) de pymo. Los métodos y las rutas salen del código del servicio, así que la referencia refleja lo que la API hace hoy.\n\n**Esta copia está filtrada a la superficie soportada por la skill `pymo-gateway`: 49 operaciones.** Un endpoint que no esté acá no es parte de la integración soportada, aunque exista en el gateway."
+    "description": "API del gateway de facturación electrónica (CFE) de pymo. Los métodos y las rutas salen del código del servicio, así que la referencia refleja lo que la API hace hoy.\n\n**Esta copia está filtrada a la superficie soportada por la skill `gateway`: 49 operaciones.** Un endpoint que no esté acá no es parte de la integración soportada, aunque exista en el gateway."
   },
   "servers": [
     {

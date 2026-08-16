@@ -6,7 +6,7 @@
   },
   "plugins": [
     {
-      "name": "pymo-gateway",
+      "name": "gateway",
       "source": "./",
       "description": "Integrar la API del gateway de pymo: facturacion electronica CFE de Uruguay ante DGI.",
       "version": "1.0.0",

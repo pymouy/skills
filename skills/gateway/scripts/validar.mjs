@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 //
-// Verificador determinista de la skill pymo-gateway.
+// Verificador determinista de la skill gateway.
 //
 // Hay errores contra esta API que son demasiado caros para dejarlos al criterio de
 // quien escribe el código - persona o modelo. Duplicar una emisión, apuntar a

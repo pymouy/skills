@@ -15,17 +15,17 @@ Claude Code:
 
 ```
 /plugin marketplace add pymouy/skills
-/plugin install pymo-gateway@pymo
+/plugin install gateway@pymo
 ```
 
-También se puede copiar el directorio a mano: `skills/pymo-gateway/` va en `.claude/skills/` de tu
+También se puede copiar el directorio a mano: `skills/gateway/` va en `.claude/skills/` de tu
 proyecto, o donde tu agente lea sus skills.
 
 ## Qué hay acá
 
 | Skill | Para qué |
 |---|---|
-| `pymo-gateway` | Escribir, revisar o depurar una integración con el gateway: login por sesión, emisión de CFE, consulta de estado, recepción de comprobantes de proveedores y datos de referencia. |
+| `gateway` | Escribir, revisar o depurar una integración con el gateway: login por sesión, emisión de CFE, consulta de estado, recepción de comprobantes de proveedores y datos de referencia. |
 
 Cada skill trae, además de `SKILL.md`, referencias que el agente carga sólo cuando las necesita
 (`referencias/`), ejemplos de request y de código (`fixtures/`) y un validador offline sin
