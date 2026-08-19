@@ -6,20 +6,25 @@ electrónica (CFE) de Uruguay ante DGI.
 
 ## Instalación
 
-```bash
-npx skills add pymouy/skills
-```
-
-El CLI detecta los agentes que tenés instalados y te deja elegir a cuáles agregarla. Como plugin de
-Claude Code:
+En Claude Code, como plugin, que es la forma que se mantiene actualizada sola:
 
 ```
 /plugin marketplace add pymouy/skills
 /plugin install gateway@pymo
 ```
 
+En Cursor, Codex y otros:
+
+```bash
+npx skills add pymouy/skills
+```
+
+El CLI detecta los agentes que tenés instalados y te deja elegir a cuáles agregarla.
+
 También se puede copiar el directorio a mano: `skills/gateway/` va en `.claude/skills/` de tu
-proyecto, o donde tu agente lea sus skills.
+proyecto, o donde tu agente lea sus skills. Una copia a mano no se actualiza sola, y esta skill se
+regenera desde el código real del gateway: una copia vieja no queda incompleta, queda describiendo
+una API que ya cambió.
 
 ## Qué hay acá
 
