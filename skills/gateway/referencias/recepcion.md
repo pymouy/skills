@@ -47,13 +47,13 @@ PUT /v1/companies/{rut}/inSobres/cfes/{cfeId}/cfeStatus
 >
 > **Sólo `ACCEPTED` acepta. Todo lo demás rechaza.**
 >
-> La implementación es literalmente `if (cfeStatus == "ACCEPTED") ACCEPTED else
-> REJECTED`: no valida, no devuelve error y no distingue entre un valor
-> desconocido y un rechazo deliberado. En la práctica eso significa que
+> Cualquier valor distinto de `ACCEPTED` rechaza el comprobante: no se valida, no
+> devuelve error y no distingue entre un valor desconocido y un rechazo
+> deliberado. En la práctica eso significa que
 > **rechazan** el comprobante:
 >
 > - `"accepted"` en minúscula, o con un espacio de más
-> - `"PENDING_REVISION"`, aunque la anotación del `/doc` lo liste como valor válido
+> - `"PENDING_REVISION"`, aunque sea uno de los estados de la tabla de arriba
 > - un body vacío, o sin la clave `cfeStatus`
 > - cualquier error de tipeo
 >
@@ -67,6 +67,5 @@ verificar sin una segunda llamada.
 > **Nota**
 >
 > Dos ejemplos de respuesta de esta sección (`GET .../inSobres` y
-> `GET .../inSobres/{sobreId}`) se publican como texto y no como JSON: la anotación
-> de origen tiene una llave mal cerrada. Parsealos con cuidado: la forma de la
-> respuesta real es la que documenta el contrato.
+> `GET .../inSobres/{sobreId}`) se publican como texto y no como JSON. Parsealos
+> con cuidado: la forma de la respuesta real es la que documenta la referencia.

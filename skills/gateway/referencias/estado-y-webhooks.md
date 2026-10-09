@@ -5,8 +5,7 @@
 
 ## Filtrado de listados
 
-Todos los `GET` de listado aceptan el mismo formato (documentación del propio
-gateway):
+Todos los `GET` de listado aceptan el mismo formato:
 
 ```
 GET .../recurso?[&f=<campo>][&<campo>=<valor>][&<campo>[<oper>]=<valor>][&s=<orden>][&sk=<skip>][&l=<limite>][&p=<populate>]
@@ -22,7 +21,7 @@ GET .../recurso?[&f=<campo>][&<campo>=<valor>][&<campo>[<oper>]=<valor>][&s=<ord
 | `l=<n>` | Límite (default 1000) |
 | `p=<campo>` | Populate de referencias |
 
-Ejemplo real:
+Ejemplo:
 
 ```
 GET /v1/companies/219999990008/sentCfes/1?f=createdAt&f=company&s=-createdAt&sk=15&l=5&p=company
@@ -54,10 +53,11 @@ envía nada.
 
 > **⚠️ Atención**
 >
-> **No se puede configurar por API.** `PATCH /v1/companies/{rut}/bo/{boNumber}`
-> sólo aplica cinco campos (`contactNumber`, `name`, `fiscalAddress`, `city`,
-> `state`) y **descarta el resto en silencio**: mandar `callbackNotificationUrl` ahí
-> responde éxito y no cambia nada. Se pide a pymo.
+> **No se puede configurar por API.** La actualización de sucursal aplica siete
+> campos (`contactNumber`, `name`, `fiscalAddress`, `city`, `state`, `from` y
+> `until`; estos dos últimos desactivan o reactivan la sucursal) y **descarta el
+> resto en silencio**: mandar `callbackNotificationUrl` ahí responde éxito y no
+> cambia nada. Se pide a pymo.
 
 ### Tipos de notificación
 
@@ -71,16 +71,16 @@ envía nada.
 ### Garantías de entrega: cuáles hay y cuáles no
 
 Esto es lo que hay que diseñar del lado del integrador, porque el gateway no lo
-resuelve. Todo verificado en el código del servicio.
+resuelve.
 
 | Tema | Qué hace el gateway |
 |---|---|
 | Autenticación / firma | **Ninguna.** El `POST` sale con `Content-Type: application/json` y nada más: sin firma HMAC, sin secreto compartido, sin cabecera de autorización |
-| Reintentos | **Ninguno.** Si el `POST` falla, el error se registra en el log y se descarta. Entrega *at-most-once* |
-| Timeout | Hay manejo de `requestTimeout` y `responseTimeout`, pero sin valor configurado: rigen los del cliente HTTP |
-| Orden | No garantizado. Los avisos salen desde varios procesos y sin secuencia |
+| Reintentos | **Hasta tres intentos**, con espera creciente entre uno y otro, si tu endpoint responde algo que no es 2xx o no acepta la conexión. Después del tercero el aviso se pierde. El mismo aviso puede llegar más de una vez |
+| Timeout | El gateway no corta la espera: una respuesta lenta no genera un reintento |
+| Orden | No garantizado. Dos avisos pueden llegar en cualquier orden |
 | Deduplicación | Imposible sobre el aviso: el payload es `{type, url_to_check}`, sin id de evento ni timestamp propio |
-| TLS | **No se valida el certificado del destino** (`rejectUnauthorized: false`) |
+| TLS | **No se valida el certificado del destino** |
 
 Consecuencias prácticas:
 
@@ -88,13 +88,16 @@ Consecuencias prácticas:
    URL puede enviarte uno. Como el contenido real lo traés vos con un `GET`
    autenticado, un aviso falso te hace consultar de más y nada peor. No agregues
    lógica que dependa del body.
-2. **No dependas de recibirlos todos.** Sin reintentos, un pico de carga o un
-   deploy tuyo pierde avisos definitivamente. Hace falta un *polling* de respaldo
-   con `updatedAt[gte]` sobre la última fecha que procesaste.
-3. **Deduplicá por comprobante, no por aviso.** Dos avisos pueden traer rangos
-   solapados; lo estable es el `id` del CFE y su estado.
-4. **Respondé rápido y con 2xx.** No hay reintento que te salve de un timeout, y
-   el gateway no espera nada del cuerpo de tu respuesta.
+2. **No dependas de recibirlos todos.** Tres intentos fallidos, por un pico de
+   carga o un deploy tuyo, pierden el aviso definitivamente. Hace falta un
+   *polling* de respaldo con `updatedAt[gte]` sobre la última fecha que
+   procesaste.
+3. **Deduplicá por comprobante, no por aviso.** Un reintento repite el mismo
+   aviso, y dos avisos pueden traer rangos solapados; lo estable es el `id` del
+   CFE y su estado.
+4. **Respondé con 2xx.** Cualquier otro código cuenta como fallo y genera un
+   reintento, así que el mismo aviso te llega otra vez. El gateway no espera nada
+   del cuerpo de tu respuesta.
 
 > **Nota**
 >

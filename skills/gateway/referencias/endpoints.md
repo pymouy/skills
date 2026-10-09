@@ -3,7 +3,7 @@
 
 # Endpoints soportados
 
-Las **49 operaciones** que esta skill soporta, en el orden del flujo de una
+Las **47 operaciones** que esta skill soporta, en el orden del flujo de una
 integración. El esquema exacto de cada una (parámetros, cuerpo, respuestas, ejemplos) está en
 `contrato.openapi.json`, que es el contrato: esta tabla es para elegir, no para construir.
 
@@ -26,7 +26,6 @@ necesita sesión y sólo opera sobre el RUT de tu propia empresa.
 | Operación | Qué hace | Acceso |
 |---|---|---|
 | `GET /v1/companies/{companyRut}` | Lee los datos y la configuración de la empresa. | restringida por RUT |
-| `PATCH /v1/companies/{companyRut}/bo/{boNumber}` | Actualiza los datos de contacto de una sucursal: nombre, dirección fiscal, ciudad, departamento y teléfono. **No cambia la URL de callback**: el gateway aplica sólo esos cinco campos y descarta el resto sin avisar, así que mandar `callbackNotificationUrl` responde éxito y no hace nada. Esa se pide a pymo. | restringida por RUT |
 | `GET /v1/companies/{companyRut}/certFile` | Descarga el archivo del certificado. | restringida por RUT |
 | `GET /v1/companies/{companyRut}/certs` | Lee los certificados cargados y su vigencia. | restringida por RUT |
 | `POST /v1/companies/{companyRut}/certs` | Sube el certificado de firma. Requisito duro: sin certificado no hay emisión. | restringida por RUT |
@@ -93,12 +92,6 @@ necesita sesión y sólo opera sobre el RUT de tu propia empresa.
 | `GET /v1/dgiData/{companyRut}` | Valida un RUT y trae los datos de esa parte en DGI. Consulta a DGI. | restringida por RUT |
 | `GET /v1/dgiData/{companyRut}/changesSince` | Cambios en los datos del contribuyente en DGI desde una fecha. | restringida por RUT |
 | `GET /v1/dgiData/{companyRut}/cva` | Estado del certificado único de vigencia anual (CVA) de una empresa. | restringida por RUT |
-
-## 8 Público/webhook
-
-| Operación | Qué hace | Acceso |
-|---|---|---|
-| `GET /consultaQR/cfe` | Verificación pública de un CFE por QR (sin autenticación). | pública |
 
 ## Filtrado de listados
 

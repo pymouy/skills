@@ -93,16 +93,6 @@
       "porque": "El gateway compara contra ACCEPTED exacto y trata todo lo demás como rechazo, con 200 y sin error: el proveedor ve un rechazo que nadie decidió."
     },
     {
-      "id": "callback-que-el-gateway-descarta",
-      "modo": "pedido",
-      "archivo": "sucursal-callback.json",
-      "url": "https://gatewaytest.pymo.uy/v1/companies/219999990008/bo/1",
-      "espera": [
-        "CONTRATO"
-      ],
-      "porque": "PATCH de sucursal aplica cinco campos y descarta el resto en silencio: mandar callbackNotificationUrl responde éxito y no cambia nada."
-    },
-    {
       "id": "codigo-con-los-siete-patrones",
       "modo": "codigo",
       "archivo": "codigo/integracion-mala.js",

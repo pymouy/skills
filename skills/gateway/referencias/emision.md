@@ -15,19 +15,25 @@ crédito/débito, exportación, contingencia): el tipo va como clave en el body.
 
 ## Antes de poder emitir
 
-Tres cosas tienen que existir del lado de pymo, y ninguna la crea el integrador
-por API. Si falta alguna, la emisión no falla al principio del request: falla
-**por comprobante**, dentro del array de respuesta.
+Tres cosas tienen que existir antes de emitir. Si falta la sucursal o el
+certificado, falla **el request entero**, antes de crear ningún comprobante. Si
+falta el CAE de un tipo, falla **por comprobante**, dentro del array de
+respuesta.
 
 | Requisito | Qué es | Si falta |
 |---|---|---|
-| La sucursal | La empresa tiene que tener la `branchOffice` que va en la URL | El request no encuentra datos de comunicación con DGI |
-| Un certificado activo | Un certificado de firma vigente de la empresa, uno solo activo a la vez | `KEYSTORE_GET_ERROR` / `COMPANY_CERT_NOT_FOUND` |
+| La sucursal | La empresa tiene que tener la `branchOffice` que va en la URL | El request entero responde `412` con `UNEXISTENT_INSTANCE` |
+| Un certificado activo | Un certificado de firma vigente de la empresa, uno solo activo a la vez | Sin certificado activo, el request entero responde `412` con `UNEXISTENT_INSTANCE`. Si el activo no se puede leer, cada comprobante falla con `KEYSTORE_GET_ERROR` |
 | Un CAE activo **por cada tipo de CFE** | Rango de numeración autorizado por DGI para ese tipo | `DGI_MISSING_CAE` |
 
+La sucursal la crea pymo en el alta de la empresa. El certificado y los CAE se
+cargan por API, con `POST /v1/companies/{rut}/certs` y
+`POST /v1/companies/{rut}/cfesActiveNumbers/{code}/upload-xml`. Cargar un CAE no
+cambia nada en DGI: registra en pymo una numeración que DGI ya autorizó.
+
 El CAE es por tipo, no por empresa: tener CAE de eFactura (`111`) no habilita
-emitir eTickets (`101`). El gateway busca uno con `active: true` y `expireDate`
-en el futuro, evaluado contra la hora local uruguaya.
+emitir eTickets (`101`). Sirve uno con `active: true` y `expireDate` en el
+futuro, evaluado contra la hora de Uruguay.
 
 Cada emisión consume un número del rango (`range.first` → `range.last`) de forma
 atómica. Cuando el rango se agota el CAE se desactiva solo, y a partir de ahí ese
@@ -92,21 +98,21 @@ Dos que conviene tener claros:
   El gateway firma y responde `SUCCESS`; DGI rechaza el sobre después, de forma
   asíncrona. Es el caso más fácil de confundir con un éxito.
 
-## Cómo responde (verificado en código)
+## Cómo responde
 
 > **⚠️ Atención**
 >
 > La respuesta del POST **no** significa "aceptado por DGI". El gateway **crea y
 > firma el CFE con su CAE** y responde de inmediato; el envío a DGI ocurre
-> **después, de forma asíncrona** (un proceso toma los CFEs y arma los sobres).
+> **después, de forma asíncrona**.
 > Por eso un CFE puede volver `SUCCESS` en la
 > emisión y quedar `PROCESSED_REJECTED` más tarde cuando DGI valida el sobre.
 
-Flujo real:
+El flujo:
 
-1. `POST sendCfes` → el gateway asigna CAE, firma y persiste el CFE → responde
+1. `POST sendCfes` → el gateway asigna CAE, firma y guarda el CFE → responde
    `DGI_CFES_RECEIVE_SUCCESS` con los datos del comprobante.
-2. Un proceso asíncrono envía el sobre a DGI.
+2. El gateway envía el sobre a DGI, de forma asíncrona.
 3. El estado final (`PROCESSED_ACCEPTED` / `PROCESSED_REJECTED`) se consulta por
    `GET .../sentCfes` o llega por el webhook `CFE_STATUS_CHANGE`.
 
@@ -166,13 +172,13 @@ que los separe.
 
 > **⚠️ Atención**
 >
-> **El estado de arriba no refleja lo de abajo.** El envelope responde siempre
-> `status: "SUCCESS"` y `message.code: "DGI_CFES_RECEIVE_SUCCESS"`, aunque **todos**
-> los comprobantes del lote hayan fallado. No hay conteo, ni bandera de éxito
-> parcial, ni código distinto: hay que recorrer `cfesIds` y mirar cada entrada.
+> **El estado de arriba no refleja lo de abajo.** Un envelope con
+> `status: "SUCCESS"` y `message.code: "DGI_CFES_RECEIVE_SUCCESS"` puede traer
+> **todos** los comprobantes del lote fallidos. No hay conteo, ni bandera de éxito
+> parcial, ni código distinto: hay que recorrer `cfesIds` y mirar cada entrada. Si
+> el envelope no es `SUCCESS`, falló el request entero y no hay `cfesIds`.
 
-Una entrada fallida tiene esta forma (capturada de la suite de tests del
-gateway):
+Una entrada fallida tiene esta forma:
 
 ```json
 {
@@ -202,23 +208,24 @@ Cómo distinguirlas en código:
 
 ## Errores
 
-Códigos de emisión, del código del gateway:
+Códigos de error de la emisión:
 
 | `message.code` | Significado | ¿Reintentable? |
 |---|---|---|
+| `UNEXISTENT_INSTANCE` (`412`) | Falta la sucursal o el certificado activo. Falla el request entero, sin `cfesIds` | No hasta cargarlo |
 | `DGI_MISSING_CAE` | No hay CAE disponible para ese tipo de CFE | No hasta cargar CAEs |
 | `DGI_MISSING_SPECIAL_CAE` / `DGI_MISSING_CUSTOM_SPECIAL_CAE` | Falta CAE especial / custom | No hasta cargar el CAE |
 | `DGI_BAD_CUSTOM_SERIE_NUMBER` | Serie/número custom inválido | No (corregir el input) |
 | `REQUIRED_PARAMETERS` / `RECEPTOR_REQUIRED` / `RECEPTOR_DOC_REQUIRED` | Falta un dato obligatorio | No (corregir el input) |
 | `DUPLICATED_KEY` | `clientEmissionId` ya usado | No reemite; devuelve el CFE original (ver Idempotencia) |
-| `KEYSTORE_GET_ERROR` | El gateway no pudo obtener el certificado | Sí (transitorio del servidor) |
+| `KEYSTORE_GET_ERROR` | El gateway no pudo leer el certificado activo | No hasta revisar el certificado |
 | `DGI_COMPANY_NOT_READY_YET` | La empresa aún no está lista en DGI | Sí, más tarde |
 | `DGI_SOAP_ERROR` | Error hablando con DGI (fase asíncrona) | Sí |
 
 > **Nota**
 >
 > El rechazo de DGI (`PROCESSED_REJECTED`) **no** viene en la respuesta del POST:
-> llega asíncrono. Ejemplo real capturado en `GET .../sentCfes`, el motivo viaja en
+> llega asíncrono. En `GET .../sentCfes`, el motivo viaja en
 > `cfeHistory[].data.digestAck`:
 >
 > ```json
@@ -241,7 +248,7 @@ consultando, si es final no.
 
 | Estado | Qué pasó |
 |---|---|
-| `CREATED` | Firmado y persistido, listo para que el job lo mande a DGI |
+| `CREATED` | Firmado, pendiente de envío a DGI |
 | `CREATED_WITHOUT_CAE_NRO` | Creado sin número de CAE asignado todavía |
 | `BULK_CREATED_WITHOUT_CAE_NRO` | Igual, dentro de un envío masivo |
 | `SCHEDULED` | Encolado para envío |
@@ -263,7 +270,7 @@ consultando, si es final no.
 | `BAD_CUSTOM_SERIE_NUMBER` | La serie o el número propios eran inválidos | No |
 | `DELETED_MISSING_CAE` | No había CAE al recibirlo. Ver Idempotencia: tu `clientEmissionId` queda libre para reintentar | No |
 | `REPORTED_DAILY_REPORT` | Incluido en el reporte diario a DGI | Sí, es posterior a la aceptación |
-| `CFE_UNKNOWN_ERROR` | Error no clasificado. Es el valor por defecto del historial | No |
+| `CFE_UNKNOWN_ERROR` | Error no clasificado | No |
 
 `FAKE_CFES_HOMOLOGATION` existe para el proceso de homologación y no aparece en
 operación normal.
@@ -299,7 +306,7 @@ POST /v1/companies/{rut}/createDebitNote
 }
 ```
 
-Cómo se referencia el original, y las reglas que impone el gateway:
+Cómo se referencia el original, y sus reglas:
 
 | Campo | Regla |
 |---|---|
@@ -318,33 +325,23 @@ Cuando no se mandan `items`, el gateway construye la línea a partir de la prime
 del original, heredando `IndFact`, `UniMed` y `NomItem`. Si no puede inferirlos,
 falla en lugar de adivinar.
 
-> **Nota**
->
-> **Verificado leyendo el código, no ejecutado.** Emitir una nota de crédito
-> requiere un CFE original aceptado por DGI, y el stack local no llega hasta ahí:
-> el único comprobante que se envió de verdad fue rechazado. Las reglas de arriba
-> salen del código del gateway; los mensajes de error exactos y el resultado
-> de un caso real no están reproducidos.
-
 # Idempotencia y reintentos
 
 ## La clave de idempotencia
 
-Cada CFE lleva un `clientEmissionId` (obligatorio) elegido por el integrador. El
-gateway tiene un **índice único** sobre:
+Cada CFE lleva un `clientEmissionId` (obligatorio) elegido por el integrador, y
+es **único** por:
 
 ```
 company + branchOffice + cfeType + clientEmissionId
 ```
 
-**Verificado en código**: es un índice único de la base, no una comprobación que
-pueda perderse en una condición de carrera.
+La unicidad vale también para requests simultáneos: dos envíos concurrentes con
+la misma clave no generan dos CFE.
 
 ## Qué devuelve un reintento con el mismo `clientEmissionId`
 
-**Verificado en código**: el gateway
-detecta la colisión, **no emite un segundo CFE**, busca el CFE original por
-`company + branchOffice + cfeType + clientEmissionId` y lo devuelve. El objeto de
+El gateway **no emite un segundo CFE**: devuelve el original. El objeto de
 error trae `code: "DUPLICATED_KEY"` y un campo `firstCfeResponse` con los datos
 del comprobante original:
 
@@ -398,8 +395,8 @@ Hay un caso donde el mismo `clientEmissionId` **sí** se puede volver a usar par
 emitir de verdad, y conviene conocerlo porque contradice la regla de arriba.
 
 Si el CFE llega y la empresa no tiene un CAE disponible para ese tipo, el gateway
-no lo emite: lo guarda marcado como `DELETED_MISSING_CAE` y **le renombra el id**
-a `<tuId>-DELETED-MISSING-CAE-<n>`. Eso libera tu id del índice único.
+no lo emite: lo registra como `DELETED_MISSING_CAE` y **con otro id**,
+`<tuId>-DELETED-MISSING-CAE-<n>`. Eso deja libre tu id.
 
 Consecuencia práctica: cuando se cargue el CAE que faltaba, reenviar el mismo
 `clientEmissionId` **emite** el comprobante, no devuelve un `DUPLICATED_KEY`. Es
@@ -407,9 +404,3 @@ el comportamiento deseado, y es la razón por la que un `DGI_MISSING_CAE` no es 
 error terminal: se resuelve cargando el CAE y reintentando igual que un timeout.
 
 Lo que no cambia: si el CFE sí se emitió, el id queda tomado para siempre.
-
-> **Nota**
->
-> Verificado en el código del gateway: el índice único, el manejo del
-> `DUPLICATED_KEY`, la construcción de `firstCfeResponse` y el renombrado por CAE
-> faltante. No se reprodujo un retry en vivo porque requiere una emisión real.

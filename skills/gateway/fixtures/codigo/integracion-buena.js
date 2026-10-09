@@ -115,8 +115,8 @@ async function reconciliar(desde, cookie) {
     .filter((x) => x.final);
 }
 
-// El webhook es una señal para ir a consultar, no un dato: no viene firmado, no se
-// reintenta y no trae los comprobantes. El polling de arriba es el respaldo obligatorio.
+// El webhook es una señal para ir a consultar, no un dato: no viene firmado y el mismo
+// aviso puede llegar más de una vez. El polling de arriba es el respaldo obligatorio.
 function alRecibirWebhook(aviso) {
   if (aviso?.type === 'CFE_STATUS_CHANGE') encolarReconciliacion();
   return 200;

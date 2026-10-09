@@ -5,8 +5,8 @@ license: Propietario de pymo. Distribuido a integradores para construir contra l
 compatibility: "HTTP/JSON sobre TLS, sesión por cookie (no bearer, no API key, no OAuth). No hay SDK oficial: sirve cualquier cliente HTTP que persista cookies. Los chequeos de scripts/ necesitan Node 18+ y no tienen dependencias."
 metadata:
   contrato-version: "1.0.0"
-  contrato-sha256: "72e85c1a36464591"
-  operaciones-soportadas: "49"
+  contrato-sha256: "9e8a408c463bbd55"
+  operaciones-soportadas: "47"
   generado-por: "gateway-docs/scripts/openapi-to-skill.mjs"
 ---
 
@@ -66,13 +66,12 @@ Diez reglas. No son recomendaciones y no se ponderan contra la conveniencia de t
    `SUCCESS` y quedar `PROCESSED_REJECTED` después. No muestres, registres ni informes un CFE como
    aceptado antes de tener un estado final.
 
-6. **Recorré todas las entradas de `payload.cfesIds`.** El envelope del lote responde siempre
-   `SUCCESS` y `DGI_CFES_RECEIVE_SUCCESS`, aunque no se haya emitido ninguno. No hay conteo ni
-   bandera de éxito parcial. Una entrada con `status: "FAIL"` es un error; una con `serie` y `nro`
+6. **Recorré todas las entradas de `payload.cfesIds`.** Un envelope `SUCCESS` con
+   `DGI_CFES_RECEIVE_SUCCESS` puede traer todos los comprobantes fallidos. No hay conteo ni bandera
+   de éxito parcial. Si el envelope no es `SUCCESS`, falló el request entero y no hay `cfesIds`. Una entrada con `status: "FAIL"` es un error; una con `serie` y `nro`
    es un comprobante. **Correlacioná por `clientEmissionId`, nunca por posición en el array.**
 
-7. **Verificá la preparación antes de emitir**, distinguiendo lo que podés comprobar de lo que
-   tenés que preguntar:
+7. **Verificá la preparación antes de emitir:**
 
    - **Comprobable con la superficie soportada:** la numeración CAE, con
      `GET /v1/companies/{companyRut}/cfesActiveNumbers/{code}` por cada tipo que vayas a emitir.
@@ -80,11 +79,11 @@ Diez reglas. No son recomendaciones y no se ponderan contra la conveniencia de t
      numeración de eFactura (`111`) no habilita emitir eTickets (`101`).
    - **Comprobable:** los datos de la empresa y sus sucursales, con
      `GET /v1/companies/{companyRut}`.
-   - **NO comprobable desde esta skill:** si hay un certificado de firma activo. Los endpoints de
-     certificados están fuera de la superficie soportada, así que no lo deduzcas de que la
-     emisión funcione: pedile al integrador que lo confirme con pymo antes de la primera emisión.
-     Sin certificado la emisión falla **por comprobante**, con `KEYSTORE_GET_ERROR` o
-     `COMPANY_CERT_NOT_FOUND`, no al principio del request.
+   - **Comprobable:** los certificados de firma y su vigencia, con
+     `GET /v1/companies/{companyRut}/certs`. No lo deduzcas de que la emisión funcione: sin
+     certificado activo falla **el request entero**, con `412` y `UNEXISTENT_INSTANCE`, y si el
+     activo no se puede leer falla **cada comprobante**, con `KEYSTORE_GET_ERROR`. Cargarlo
+     (`POST /v1/companies/{companyRut}/certs`) es una decisión del integrador, no tuya.
 
 8. **Homologación por default.** Toda configuración y todo ejemplo que generes apunta a
    `https://gatewaytest.pymo.uy`. Producción (`https://gateway.pymo.uy`) es una decisión humana
@@ -144,14 +143,15 @@ Las fases suponen la anterior. El detalle está en las referencias.
 2. **Sesión.** `POST /v1/login` devuelve `Set-Cookie: connect.sid`. Persistila y reenviala en cada
    llamada. Vence **1 hora después del login**, es absoluto y usar la API no lo extiende: un proceso
    largo tiene que detectar `401 UNAUTHORIZED` y reloguear.
-3. **Preparación.** Confirmá la empresa, la sucursal y la numeración CAE del tipo que vas a emitir.
+3. **Preparación.** Confirmá la empresa, la sucursal, el certificado activo y la numeración CAE del
+   tipo que vas a emitir.
 4. **Construcción.** Armá el comprobante con datos verificados. `clientEmissionId` se persiste acá,
    antes de tocar la red.
 5. **Emisión.** `POST /v1/companies/{rut}/sendCfes/{bo}`. Leé `status`, después recorré `cfesIds`
    entrada por entrada, después persistí lo devuelto.
 6. **Reconciliación.** El estado final llega por polling con `updatedAt[gte]` o por el webhook
-   `CFE_STATUS_CHANGE`, que es sólo una señal para ir a consultar. Los dos, no uno: el webhook no
-   tiene reintentos.
+   `CFE_STATUS_CHANGE`, que es sólo una señal para ir a consultar. Los dos, no uno: un aviso puede
+   perderse después de tres intentos, y el mismo aviso puede llegar más de una vez.
 
 Las tres capas de resultado son distintas y hay que tratarlas por separado: **transporte** (el
 código HTTP), **resultado de pymo** (`status` y `message.code` en el body) y **estado fiscal ante
@@ -268,7 +268,7 @@ puntos donde una deducción plausible produce un comprobante válido y equivocad
    **Preguntale a pymo:** ¿Cuál es el formato exacto del CSV de bulkSendCfes: columnas, orden, separador, codificación y cómo se expresan las líneas de detalle?
 
 3. **Reconciliar comprobantes de contingencia una vez que DGI vuelve a responder** — sin procedimiento documentado.
-   El mecanismo por el que los comprobantes 2xx se informan a DGI al normalizarse el servicio (reporte diario contra reenvío) no está reproducido ni descrito.
+   El mecanismo por el que los comprobantes 2xx se informan a DGI al normalizarse el servicio (reporte diario contra reenvío) no está documentado.
    **No:** No armes un proceso de reenvío por tu cuenta: cuándo corresponde contingencia y cómo se regulariza son criterios del régimen, no de la API.
    **Preguntale a pymo y el contador de la empresa:** ¿Cómo se informan a DGI los comprobantes emitidos en contingencia una vez restablecido el servicio, y qué tiene que hacer el integrador?
 
@@ -291,7 +291,7 @@ puntos donde una deducción plausible produce un comprobante válido y equivocad
 
 | Archivo | Cuándo |
 |---|---|
-| `referencias/endpoints.md` | Para elegir el endpoint: las 49 operaciones soportadas, por fase |
+| `referencias/endpoints.md` | Para elegir el endpoint: las 47 operaciones soportadas, por fase |
 | `referencias/ambientes-y-sesion.md` | Antes de la primera llamada: URL base, login, cookie, vencimiento, permisos por RUT |
 | `referencias/emision.md` | Antes de emitir: requisitos, cuerpo del comprobante, respuesta, lotes, errores, estados e idempotencia |
 | `referencias/estado-y-webhooks.md` | Para reconciliar: filtrado de listados, webhook `CFE_STATUS_CHANGE` y sus garantías |
@@ -303,6 +303,6 @@ puntos donde una deducción plausible produce un comprobante válido y equivocad
 | `scripts/validar.mjs` | Antes de mandar un request, y antes de dar la integración por terminada |
 | `fixtures/` | Ejemplos válidos e inválidos, y los casos que usa la autoprueba del verificador |
 
-Contrato: versión 1.0.0, 49 operaciones, sha256 `72e85c1a36464591`.
+Contrato: versión 1.0.0, 47 operaciones, sha256 `9e8a408c463bbd55`.
 Si el gateway con el que hablás no se comporta como dice este contrato, no lo compenses en el
 código: pará y confirmá qué versión estás integrando.
