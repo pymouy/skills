@@ -5,8 +5,6 @@
 
 ## IndFact - indicador de facturación por línea
 
-Tabla **verificada en el código** del gateway.
-
 | IndFact | Significado | IVA |
 |---|---|---|
 | 1 | Sin IVA (exento) | 0% |
@@ -54,9 +52,45 @@ total 3050.
 archivo que podés rehacer vos: si tus totales no cierran así, el problema está en cómo estás
 acumulando, no en la API.
 
+## CAEEspecial, indFact y MntBruto según el tipo de contribuyente
+
+Estas reglas aplican a la emisión de e-Facturas y e-Tickets, y de sus notas
+de crédito y débito; el gateway también controla `MntBruto` contra el CAE
+en los demás comprobantes que lo llevan (todos salvo remitos y resguardos).
+El tipo de contribuyente de la empresa emisora determina qué `CAEEspecial`,
+`indFact` y `MntBruto` corresponde enviar en cada comprobante.
+
+| Tipo de contribuyente | CAEEspecial | indFact | MntBruto |
+|---|---|---|---|
+| Régimen general | no se informa | según la operación | 1, 2, o no se informa, según cómo se expresen los importes |
+| Exonerado de IVA | 1 | 1, 5, 6, 7 o 10 | 1, 2, o no se informa, según cómo se expresen los importes |
+| IVA mínimo | 2 | 16 | 3 |
+| Monotributo | 3 | 16 | 3 |
+| Monotributo Social MIDES | 4 | 16 | 3 |
+
+Con `CAEEspecial` 1 la causal de exoneración (`CausalCAEEsp`) la trae el
+talonario que se está usando: el integrador no la envía.
+
+`MntBruto` 1 indica importes con IVA incluido, 2 con IMEBA y adicionales
+incluidos, y 3 es el de IVA mínimo, Monotributo y Monotributo Social MIDES.
+Si tus importes de línea son netos, sin IVA ni IMEBA incluido, no informes
+`MntBruto`: vale para régimen general y también con `CAEEspecial` 1.
+
+**Qué valida el gateway:**
+
+- `CAEEspecial` va dentro de `IdDoc`, igual que `MntBruto`.
+- El comprobante no se emite si `MntBruto` no coincide con el CAE que se usa:
+  con `CAEEspecial` 2, 3 o 4 sólo se acepta `MntBruto` 3; en los demás casos
+  se acepta 1, 2, o que no lo informes.
+- `indFact` no se valida contra el tipo de contribuyente: esa columna de la
+  tabla es una guía de qué enviar, no una restricción que el gateway te
+  imponga.
+- Si el CAE que se usa tiene `CAEEspecial` 3 o 4 (Monotributo o Monotributo
+  Social MIDES), el gateway rechaza el envío si mandás `IVAalDia`.
+
 ## Redondeo
 
-**Verificado en código.** El gateway **no re-redondea** las líneas: los importes
+El gateway **no re-redondea** las líneas: los importes
 de línea viajan tal como los manda el integrador. El único redondeo que aplica es
 sobre los **totales en UYU al enviar a DGI**, a 2 decimales.
 
@@ -65,7 +99,7 @@ Consecuencia práctica para el integrador:
 - Redondeá vos las líneas a 2 decimales antes de enviar; el gateway no lo hace por
   vos a nivel línea.
 - Los totales se formatean a 2 decimales hacia DGI.
-- El ejemplo real de arriba (neto 2500, IVA 550, total 3050) ya está en enteros y
+- El ejemplo de arriba (neto 2500, IVA 550, total 3050) ya está en enteros y
   cierra exacto; con decimales, la coherencia línea-vs-total es responsabilidad del
   emisor.
 
@@ -79,8 +113,7 @@ en [Documentos de interés](https://www.efactura.dgi.gub.uy/principal/ampliacion
 >
 > **No hay endpoints separados de contingencia.** La contingencia se emite por el
 > mismo `POST /v1/companies/{rut}/sendCfes/{branchOffice}`, usando el tipo de CFE
-> de contingencia correspondiente (verificado en el código del gateway: la tabla de tipos es una sola y las rutas
-> no tienen variantes `_cont`).
+> de contingencia correspondiente.
 
 ## Mapeo tipo normal → tipo contingencia
 
@@ -127,7 +160,7 @@ Dos cosas que sólo les pasan a estos:
 - **Se pueden reliquidar.** DGI puede devolver un CFC reliquidado, y el estado
   queda en `PROCESSED_RELIQUIDATED`. Los comprobantes normales nunca pasan por
   ahí.
-- **`PROCESSED_REJECTED` es ambiguo para ellos.** El gateway usa el mismo valor
+- **`PROCESSED_REJECTED` es ambiguo para ellos.** La API usa el mismo valor
   para un CFE rechazado y para un CFC observado, así que el estado por sí solo no
   distingue los dos casos (ver Emisión).
 
@@ -137,9 +170,11 @@ Dos cosas que sólo les pasan a estos:
 >
 > **El criterio es de DGI, no de esta API.** Cuántos fallos o cuánto tiempo sin
 > respuesta habilitan emitir en contingencia, y por cuánto, es una regla del
-> régimen, y no está codificada en el gateway: no hay un umbral ni un modo que se
-> active solo. El gateway sólo registra la condición, con
-> `CAN NOT CONNECT TO DGI. Use contingency` cuando no logra conectarse.
+> régimen, y la API no la aplica: no hay un umbral ni un modo que se active solo,
+> y tampoco un aviso de que DGI no responde. Lo que se ve es el estado de los
+> comprobantes: la emisión sigue respondiendo `SUCCESS`, y los CFE que no se
+> pudieron enviar quedan en `SCHEDULED_CONNECTION_ERR` y se reintentan solos (ver
+> Emisión).
 >
 > Es exactamente el tipo de decisión de la sección Cuándo parar y
 > preguntar: consultalo con el contador de la empresa antes de emitir en
@@ -147,8 +182,6 @@ Dos cosas que sólo les pasan a estos:
 
 > **Nota**
 >
-> **Sin verificar:** el mecanismo por el que los comprobantes de contingencia se
-> informan a DGI una vez normalizado el servicio (reporte diario contra reenvío)
-> no está reproducido acá. El stack local no llegó a emitir un CFE aceptado, así
-> que la reconciliación no se pudo observar de punta a punta. Queda como pregunta
-> abierta al equipo de pymo.
+> Cómo se informan a DGI los comprobantes de contingencia una vez normalizado el
+> servicio (reporte diario o reenvío) no está documentado acá. Consultalo con pymo
+> antes de armar un proceso propio.

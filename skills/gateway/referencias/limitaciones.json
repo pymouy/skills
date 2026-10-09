@@ -24,7 +24,7 @@
       "id": "reconciliacion-contingencia",
       "capacidad": "Reconciliar comprobantes de contingencia una vez que DGI vuelve a responder",
       "estado": "sin procedimiento documentado",
-      "por_que": "El mecanismo por el que los comprobantes 2xx se informan a DGI al normalizarse el servicio (reporte diario contra reenvío) no está reproducido ni descrito.",
+      "por_que": "El mecanismo por el que los comprobantes 2xx se informan a DGI al normalizarse el servicio (reporte diario contra reenvío) no está documentado.",
       "no_hagas": "No armes un proceso de reenvío por tu cuenta: cuándo corresponde contingencia y cómo se regulariza son criterios del régimen, no de la API.",
       "preguntar_a": "pymo y el contador de la empresa",
       "pregunta": "¿Cómo se informan a DGI los comprobantes emitidos en contingencia una vez restablecido el servicio, y qué tiene que hacer el integrador?"

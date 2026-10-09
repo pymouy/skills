@@ -3,7 +3,7 @@
   "info": {
     "title": "pymo Gateway API - superficie soportada",
     "version": "1.0.0",
-    "description": "API del gateway de facturación electrónica (CFE) de pymo. Los métodos y las rutas salen del código del servicio, así que la referencia refleja lo que la API hace hoy.\n\n**Esta copia está filtrada a la superficie soportada por la skill `gateway`: 49 operaciones.** Un endpoint que no esté acá no es parte de la integración soportada, aunque exista en el gateway."
+    "description": "API del gateway de facturación electrónica (CFE) de pymo. Los métodos y las rutas salen del código del servicio, así que la referencia refleja lo que la API hace hoy.\n\n**Esta copia está filtrada a la superficie soportada por la skill `gateway`: 47 operaciones.** Un endpoint que no esté acá no es parte de la integración soportada, aunque exista en el gateway."
   },
   "servers": [
     {
@@ -41,9 +41,6 @@
     },
     {
       "name": "7 Servicios DGI"
-    },
-    {
-      "name": "8 Público/webhook"
     }
   ],
   "paths": {
@@ -208,6 +205,33 @@
             "$ref": "#/components/parameters/CompanyRut"
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password1": {
+                    "type": "string",
+                    "description": "New password"
+                  },
+                  "password2": {
+                    "type": "string",
+                    "description": "New password confirmation"
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "When sent, it is assigned as the session email of every branchOffice and the password is set for that single session."
+                  }
+                },
+                "required": [
+                  "password1",
+                  "password2"
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Éxito",
@@ -220,8 +244,14 @@
                   "Exito": {
                     "value": {
                       "payload": {
-                        "password1": "somePass",
-                        "password2": "somePass"
+                        "email": "cfes-219999990008@pymo.uy",
+                        "branchOffices": [
+                          "1"
+                        ],
+                        "previousEmails": [
+                          "admin@mefactura.uy"
+                        ],
+                        "staleSessions": []
                       },
                       "message": {
                         "code": "PASSWORD_UPDATED",
@@ -1315,7 +1345,10 @@
                               "fiscalAddress": "Company address",
                               "city": "Cerro Largo",
                               "state": "Mozambique",
-                              "callbackNotificationUrl": "http://someurl.com/",
+                              "callbackNotificationUrl": {
+                                "pymo": "http://someurl.com/",
+                                "payments": "http://payments.someurl.com/"
+                              },
                               "_id": "5a3d849be1fb0d35e5c0d692"
                             }
                           ],
@@ -1480,106 +1513,6 @@
                 "required": [
                   "logo"
                 ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Respuesta"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sesión no iniciada o vencida (`UNAUTHORIZED`)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RespuestaError"
-                },
-                "examples": {
-                  "No_autorizado": {
-                    "value": {
-                      "payload": {},
-                      "message": {
-                        "code": "UNAUTHORIZED",
-                        "value": "Debe iniciar sesión."
-                      },
-                      "status": "FAIL"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "La sesión existe pero no alcanza este recurso (`FORBIDDEN`)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RespuestaError"
-                },
-                "examples": {
-                  "Prohibido": {
-                    "value": {
-                      "payload": {},
-                      "message": {
-                        "code": "FORBIDDEN",
-                        "value": "No tiene permisos para realizar esta acción."
-                      },
-                      "status": "FAIL"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-acceso": "restringida-por-rut"
-      }
-    },
-    "/v1/companies/{companyRut}/bo/{boNumber}": {
-      "patch": {
-        "operationId": "patch_v1_companies_companyRut_bo_boNumber",
-        "summary": "Actualizar una sucursal",
-        "description": "**Actualiza los datos de contacto de una sucursal: nombre, dirección fiscal, ciudad, departamento y teléfono. **No cambia la URL de callback**: el gateway aplica sólo esos cinco campos y descarta el resto sin avisar, así que mandar `callbackNotificationUrl` responde éxito y no hace nada. Esa se pide a pymo.**\n\n**Acceso:** restringida. Requiere sesión, y sólo opera sobre el RUT de tu propia empresa: pedir otro RUT responde `403 FORBIDDEN`.",
-        "tags": [
-          "2 Configuración"
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/CompanyRut"
-          },
-          {
-            "name": "boNumber",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "example": "1",
-              "default": "1"
-            },
-            "example": "1"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ActualizacionSucursal"
-              },
-              "example": {
-                "name": "Sucursal Centro",
-                "fiscalAddress": "Calle Falsa 1234",
-                "city": "Montevideo",
-                "state": "Montevideo",
-                "contactNumber": "099123456"
               }
             }
           }
@@ -4709,30 +4642,6 @@
         },
         "x-acceso": "restringida-por-rut"
       }
-    },
-    "/consultaQR/cfe": {
-      "get": {
-        "operationId": "get_consultaQR_cfe",
-        "summary": "Verificar un CFE por QR (público)",
-        "description": "**Verificación pública de un CFE por QR (sin autenticación).**\n\n**Acceso:** pública. No requiere sesión.",
-        "tags": [
-          "8 Público/webhook"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Respuesta"
-                }
-              }
-            }
-          }
-        },
-        "security": [],
-        "x-acceso": "publica"
-      }
     }
   },
   "components": {
@@ -5929,29 +5838,6 @@
           }
         }
       },
-      "ActualizacionSucursal": {
-        "type": "object",
-        "minProperties": 1,
-        "additionalProperties": false,
-        "description": "Los **cinco** campos que el gateway aplica. Cualquier otra clave se descarta en silencio y la respuesta igual dice éxito: en particular `callbackNotificationUrl` **no** se puede cambiar por acá.",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "fiscalAddress": {
-            "type": "string"
-          },
-          "city": {
-            "type": "string"
-          },
-          "state": {
-            "type": "string"
-          },
-          "contactNumber": {
-            "type": "string"
-          }
-        }
-      },
       "DocumentoReferenciado": {
         "type": "object",
         "required": [
@@ -6142,7 +6028,7 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "connect.sid",
-        "description": "Sesión por cookie. `POST /v1/login` devuelve `Set-Cookie: connect.sid=...` y el resto de los endpoints la reusan; no hay bearer token ni API key. La cookie va firmada y la sesión vive del lado del servidor, así que sobrevive a un reinicio del servicio pero no a su expiración.\n\nDura **1 hora desde el login** (`config.cookieMaxAge`), y es un vencimiento absoluto: usar la API no lo extiende. Vencida, cualquier endpoint responde `401 UNAUTHORIZED` y hay que volver a loguearse.\n\nEn cURL eso es un cookie jar: `-c cookies.txt` en el login para guardarla y `-b cookies.txt` en cada llamada siguiente. En un cliente HTTP, cualquier cosa que persista cookies entre requests."
+        "description": "Sesión por cookie de `POST /v1/login`, válida 1 hora. Ver Autenticación."
       }
     },
     "parameters": {

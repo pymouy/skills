@@ -15,14 +15,14 @@
 
 ## Políticas
 
-| Tema | Valor | Estado |
-|---|---|---|
-| Autenticación | Sesión por cookie vía `POST /v1/login` - ver Autenticación | verificado en código |
-| Duración de sesión | Cookie con `maxAge` de **1 hora** (`config.cookieMaxAge`) | verificado en código |
-| Rate limiting | **No hay** rate limiting implementado en el gateway (sin middleware ni dependencia) | verificado en código |
-| Timeout del cliente | No hay timeout de servidor explícito configurado. La respuesta de emisión es rápida porque el envío a DGI es asíncrono (ver Emisión); igual conviene un timeout de cliente generoso | verificado en código |
-| CORS | Habilitado con credenciales, orígenes contra una allowlist por regex (`config.corsOptions`) | verificado en código |
-| Formato de fechas | ISO 8601 (`2026-08-03T00:00:00-03:00`) | relevado |
+| Tema | Valor |
+|---|---|
+| Autenticación | Sesión por cookie vía `POST /v1/login` - ver Autenticación |
+| Duración de sesión | **1 hora** desde el login |
+| Rate limiting | **No hay** rate limiting |
+| Timeout del cliente | La API no fija un timeout. La respuesta de emisión es rápida porque el envío a DGI es asíncrono (ver Emisión); igual conviene un timeout de cliente generoso |
+| CORS | Habilitado con credenciales, sólo para una lista de orígenes permitidos |
+| Formato de fechas | ISO 8601 (`2026-08-03T00:00:00-03:00`) |
 
 > **Nota**
 >
@@ -76,7 +76,7 @@ curl -c cookies.txt -X POST {base}/v1/login \
   -d '{ "email": "empresa@ejemplo.com", "password": "********" }'
 ```
 
-Respuesta real (stack local):
+Respuesta:
 
 ```json
 { "payload": { "email": "empresa@ejemplo.com" },
@@ -111,10 +111,10 @@ Las otras dos categorías que se podrían esperar están vacías, y conviene dec
 
 - **Interna / de administración**: existe en el gateway, pero no se publica acá.
   Ninguno de esos endpoints aparece en esta referencia.
-- **Obsoleta**: ninguno. No hay endpoints marcados como deprecados en el gateway,
-  así que nada de lo documentado está anunciado para desaparecer.
+- **Obsoleta**: ninguno. Nada de lo documentado está anunciado para
+  desaparecer.
 
-Respuesta real sin sesión o sin permiso (`HTTP 401`):
+Respuesta sin sesión o sin permiso (`HTTP 401`):
 
 ```json
 {
@@ -130,7 +130,7 @@ Respuesta real sin sesión o sin permiso (`HTTP 401`):
 curl -b cookies.txt -X POST {base}/v1/logout
 ```
 
-Respuesta real (`HTTP 200`):
+Respuesta (`HTTP 200`):
 
 ```json
 { "payload": {},
@@ -141,18 +141,12 @@ Respuesta real (`HTTP 200`):
 ## Cuánto dura la sesión
 
 **Una hora desde el login**, y es un vencimiento absoluto: usar la API no lo
-extiende. Sale de `config.cookieMaxAge` (`1000 * 60 * 60`), que no tiene override
-por ambiente, así que es el mismo número en homologación y en producción.
+extiende. Es la misma hora en homologación y en producción.
 
 Cuando vence, cualquier endpoint responde `401` con `UNAUTHORIZED` igual que si
 nunca hubieras iniciado sesión. No hay refresh: se vuelve a llamar a
 `POST /v1/login`.
 
-La sesión se guarda del lado del servidor, así que sobrevive a un reinicio del
-servicio: si tu llamada falla con un error de red y reintentás, la sesión sigue
-viva. Lo que la termina es el vencimiento o `POST /v1/logout`.
-
-> **Nota**
->
-> Los cuerpos de ejemplo están capturados de un gateway real, y el resto de esta
-> página está verificado contra el código del servicio.
+La sesión sobrevive a un reinicio del servicio: si tu llamada falla con un
+error de red y reintentás, la sesión sigue viva. Lo que la termina es el
+vencimiento o `POST /v1/logout`.
